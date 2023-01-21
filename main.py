@@ -1,4 +1,5 @@
 import numpy as np
+from queue import PriorityQueue
 
 
 class Job:
@@ -8,6 +9,9 @@ class Job:
         self.timeout = timeout
         self.waiting_time = 0
         self.priority  = priority
+
+    def __lt__(self, other: 'Job') -> bool:
+        return (self.priority, self.waiting_time) > (other.priority, other.waiting_time)
 
     def __repr__(self) -> str:
         return f"arrival: {self.arrival},\t service_time: {round(self.service_time, 3)},\t timeout: {round(self.timeout, 3)},\t waiting_time: {self.waiting_time},\t priority: {self.priority}"
@@ -29,12 +33,42 @@ def job_creator(number_of_jobs, X, Y, Z):
     priorities = np.random.choice(np.arange(1, 4), p=[0.7, 0.2, 0.1], size=number_of_jobs)
     jobs = []
     for arrival, service_time, timeout, priority in zip(arrivals, service_times, timeouts, priorities):
-        jobs.append(Job(arrival, service_time, timeout, priority))
+        j = Job(arrival, service_time, timeout, priority)
+        jobs.append(j)
     return jobs
 
-def job_loader():
-    pass
+""" Loads the top k jobs from the priority queue and inserts them
+    into the RR-t1
+"""
+def job_loader(k: int):
+    for _ in range(k):
+        waiting_list_round_robin_t1.append(priority_q.get())
 
-jobs = job_creator(20, 1, 5, 10)
-for j in jobs:
-    print(j)
+""" Check if number of jobs in the second layer queues are less than k
+    to transfer new jobs from priority queue to RR-T1
+"""
+def transfer_tasks_from_priority_queue(k: int):
+    if len(waiting_list_round_robin_t1) + \
+        len(waiting_list_round_robin_t2) + \
+        len(waiting_list_FCFS) < k:
+        job_loader(k)
+
+
+if __name__ == "__main__":
+    X = 1
+    Y = 5
+    Z = 10
+    NUMBER_OF_JOBS = 20
+    jobs = job_creator(NUMBER_OF_JOBS, X, Y, Z)
+
+    waiting_list_round_robin_t1 = []
+    waiting_list_round_robin_t2 = []
+    waiting_list_FCFS = []
+    priority_q = PriorityQueue()
+
+
+    for i, job in enumerate(jobs):
+        priority_q.put(job)
+
+    while not priority_q.empty():
+        print(priority_q.get())
