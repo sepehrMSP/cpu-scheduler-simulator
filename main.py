@@ -15,7 +15,7 @@ class Job:
         return (self.priority, self.waiting_time) > (other.priority, other.waiting_time)
 
     def __repr__(self) -> str:
-        return f"arrival: {self.arrival},\t service_time: {round(self.service_time, 3)},\t timeout: {round(self.timeout, 3)},\t waiting_time: {self.waiting_time},\t priority: {self.priority}"
+        return f"arrival: {self.arrival},\t service_time: {round(self.service_time, 3)},\t timeout: {round(self.timeout, 3)},\t waiting_time: {self.waiting_time},\t priority: {self.priority}\n"
 
 """ this function creates tasks with rate X in a poisson process.
     service time of these tasks follow an exponential distribution with
@@ -39,7 +39,7 @@ def job_creator(number_of_jobs, X, Y, Z) -> List[Job]:
     return jobs
 
 """ Loads the top k jobs from the priority queue and inserts them
-    into the RR-t1
+    into the RR-T1
 """
 def job_loader(k: int):
     for _ in range(k):
@@ -54,37 +54,90 @@ def transfer_tasks_from_priority_queue(k: int):
         len(waiting_list_FCFS) < k:
         job_loader(k)
 
+def select_second_layer_queue() -> str:
+    prob = [0.8, 0.1, 0.1]
+    queues = ['RR-T1', 'RR-T2', 'FCFS']
+    queue = np.random.choice(queues, size=1, p=prob)
+    return queue
+
+def update_waiting_time(passed_time):
+    for j in waiting_list_round_robin_t1:
+        j.waiting_time += passed_time
+    for j in waiting_list_round_robin_t2:
+        j.waiting_time += passed_time
+    for j in waiting_list_FCFS:
+        j.waiting_time += passed_time
+
+    for j in priority_q.queue:
+        j.waiting_time += passed_time
+
+def dispatcher():
+    queue = select_second_layer_queue()
+    execution_time = 0
+    job = None
+    if queue == 'RR-T1':
+        if len(waiting_list_round_robin_t1) > 0:
+            job = waiting_list_round_robin_t1.pop(0)
+            execution_time = T1
+        else:
+            queue = 'RR-T2'
+
+    if queue == 'RR-T2':
+        if len(waiting_list_round_robin_t2) > 0:
+            job = waiting_list_round_robin_t2.pop(0)
+            execution_time = T2
+        else:
+            queue = 'FCFS'
+
+    if queue == 'FCFS':
+        if len(waiting_list_FCFS) > 0:
+            job = waiting_list_FCFS.pop(0)
+            execution_time = job.service_time
+
+    return execution_time
 
 if __name__ == "__main__":
     X = 1
     Y = 5
     Z = 10
     NUMBER_OF_JOBS = 20
-    SIMULATION_TIME = 10000
+    SIMULATION_TIME = 30
     K = 5
+    T1 = 10
+    T2 = 10
+
     jobs = job_creator(NUMBER_OF_JOBS, X, Y, Z)
     jobs.sort(key=lambda x: x.arrival)
 
-    waiting_list_round_robin_t1 = []
-    waiting_list_round_robin_t2 = []
-    waiting_list_FCFS = []
+    waiting_list_round_robin_t1: List[Job] = []
+    waiting_list_round_robin_t2: List[Job] = []
+    waiting_list_FCFS: List[Job] = []
     priority_q = PriorityQueue()
 
 
-    for i, job in enumerate(jobs):
-        priority_q.put(job)
+    # for i, job in enumerate(jobs):
+    #     priority_q.put(job)
 
-    while not priority_q.empty():
-        print(priority_q.get())
+    # while not priority_q.empty():
+    #     print(priority_q.get())
 
     current_time = 0
+    execution_time = 0
     while current_time < SIMULATION_TIME:
         #assning the created jobs into priority_q based on their arrival time
         while len(jobs) > 0:
             if current_time == jobs[0].arrival:
-                priority_q.put(jobs.pop(0))
+                j = jobs.pop(0)
+                priority_q.put(j)
             else:
                 break
 
         if current_time % K == 0:
             transfer_tasks_from_priority_queue(K)
+
+        if execution_time == 0:
+            execution_time = dispatcher()
+
+        current_time += 1
+        execution_time -= 1
+        update_waiting_time(1)
