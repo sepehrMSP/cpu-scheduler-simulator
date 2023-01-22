@@ -1,3 +1,4 @@
+from typing import List
 import numpy as np
 from queue import PriorityQueue
 
@@ -26,7 +27,7 @@ class Job:
     ------------------------------------------
     probability |   0.7 |   0.2     |   0.1
 """
-def job_creator(number_of_jobs, X, Y, Z):
+def job_creator(number_of_jobs, X, Y, Z) -> List[Job]:
     arrivals = np.random.poisson(lam=X, size=number_of_jobs)
     service_times = np.random.exponential(scale=Y, size=number_of_jobs)
     timeouts = np.random.exponential(scale=Z, size=number_of_jobs)
@@ -59,7 +60,10 @@ if __name__ == "__main__":
     Y = 5
     Z = 10
     NUMBER_OF_JOBS = 20
+    SIMULATION_TIME = 10000
+    K = 5
     jobs = job_creator(NUMBER_OF_JOBS, X, Y, Z)
+    jobs.sort(key=lambda x: x.arrival)
 
     waiting_list_round_robin_t1 = []
     waiting_list_round_robin_t2 = []
@@ -72,3 +76,15 @@ if __name__ == "__main__":
 
     while not priority_q.empty():
         print(priority_q.get())
+
+    current_time = 0
+    while current_time < SIMULATION_TIME:
+        #assning the created jobs into priority_q based on their arrival time
+        while len(jobs) > 0:
+            if current_time == jobs[0].arrival:
+                priority_q.put(jobs.pop(0))
+            else:
+                break
+
+        if current_time % K == 0:
+            transfer_tasks_from_priority_queue(K)
