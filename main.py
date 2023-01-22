@@ -33,8 +33,10 @@ def job_creator(number_of_jobs, X, Y, Z) -> List[Job]:
     timeouts = np.random.exponential(scale=Z, size=number_of_jobs)
     priorities = np.random.choice(np.arange(1, 4), p=[0.7, 0.2, 0.1], size=number_of_jobs)
     jobs = []
+    sum_arrival = 0
     for arrival, service_time, timeout, priority in zip(arrivals, service_times, timeouts, priorities):
-        j = Job(arrival, service_time, timeout, priority)
+        j = Job(arrival + sum_arrival, service_time, timeout, priority)
+        sum_arrival += arrival
         jobs.append(j)
     return jobs
 
